@@ -445,6 +445,7 @@ class GroupVK:
         self.name = resp['name']
         self.gid = resp['id']
         self.membs = resp['members_count']
+        self.url = f'https://vk.com/club{self.gid}'
         # print('.'.strip())
 
     def __dict__(self):
@@ -456,7 +457,7 @@ class GroupVK:
 
     def __str__(self):
         print('\b..', end='')
-        return f'"name": {self.name}, "gid": {self.gid}, "members_count": {self.membs}'
+        return f'"name": {self.name}, "gid": {self.gid}, "members_count": {self.membs}, "url": {self.url}'
 
 
 # чуть позже
