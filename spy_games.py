@@ -59,7 +59,7 @@
 
 
 
-from reg_auth import gettoken # get token from file
+from reg_auth import gettoken # get token from my file
 import requests
 from time import sleep
 from pprint import pprint
@@ -73,32 +73,44 @@ import sys
 URL = 'https://api.vk.com/method/'
 VER = '5.101'
 # TOKEN = '73eaea320bdc0d3299faa475c196cfea1c4df9da4c6d291633f9fe8f83c08c4de2a3abf89fbc3ed8a44e1' # from netology
-TOKEN = gettoken() # заменить на токен с доступом к группам?
+# токен нетологии не подходит,т.к. нужно наличие доступа к группам. в этом токене вероятнее всего такого доступа нет
 
-def about_all_groups(lst_ids): # по сути lst_ids это результат getgroups(self)
-    '''
-    Get info about 500 groups for create class GroupVK with member_count.
-    ???По сути уже не нужно, т.к. задействуется функционал в самом классе GroupVK????
+TOKEN = gettoken() # заменить на токен с доступом к группам...
 
-    :param lst_ids:
-    :return:
-    '''
-    method = 'groups.getById'
-    # print(type(lst_ids[0]))
-    # print(lst_ids)
-    parametrs = {
-        'group_ids': ','.join(str(i) for i in lst_ids),
-        'fields': 'members_count',
-        'v': VER,
-        'access_token': TOKEN,
-    }
-    sleep(0.2)
-    response = requests.get(url=f'{URL}{method}', params=parametrs)
-    # pprint(response.json())
-    resp = response.json()['response']
-    return resp
+# def about_all_groups(lst_ids): # по сути lst_ids это результат getgroups(self)
+#     '''
+#     Get info about 500 groups for create class GroupVK with member_count.
+#     ???По сути уже не нужно, т.к. задействуется функционал в самом классе GroupVK????
+#
+#     :param lst_ids:
+#     :return:
+#     '''
+#     method = 'groups.getById'
+#     # print(type(lst_ids[0]))
+#     # print(lst_ids)
+#     parametrs = {
+#         'group_ids': ','.join(str(i) for i in lst_ids),
+#         'fields': 'members_count',
+#         'v': VER,
+#         'access_token': TOKEN,
+#     }
+#     sleep(0.2)
+#     response = requests.get(url=f'{URL}{method}', params=parametrs)
+#     # pprint(response.json())
+#     resp = response.json()['response']
+#     return resp
 
 def exec_spy_groups(groups, members=0):
+    '''
+    get spy groups with execute
+
+    :param groups:
+    list ids groups
+
+    :param members:
+    input members for search groups
+    :return:
+    '''
     method = 'execute'
     groups_str = ",".join(str(i) for i in groups)
     # print(groups_str)
@@ -309,17 +321,21 @@ class UserVK:
                 for i in range(num1.__round__() + 1):
                     lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], membs))
                     del lst_tmp[:25]
-            print(lst_spy_gid, '000-----000')
-            lst_about_grp = []
-            num = len(lst_spy_gid)/500 # преодалеваем ограничение на поиск инфо о 500 группах
-            if 0 < len(lst_spy_gid) <= 500:
-                lst_about_grp = about_all_groups(lst_spy_gid)
-            elif len(lst_spy_gid) == 0:
-                print('не найдены такие группы')
-            else:
-                for i in range(num.__round__() + 1): # добавить условие с целочисленным делением, т.е. когда float == int
-                    lst_about_grp.extend(about_all_groups(lst_spy_gid[:500]))
-                    del lst_spy_gid[:500]
+            # print(lst_spy_gid, '000-----000')
+            #
+            # уже не надо, юзаем класс групп
+            # lst_about_grp = []
+            # num = len(lst_spy_gid)/500 # преодалеваем ограничение на поиск инфо о 500 группах
+            # if 0 < len(lst_spy_gid) <= 500:
+            #     lst_about_grp = about_all_groups(lst_spy_gid)
+            # elif len(lst_spy_gid) == 0:
+            #     print('не найдены такие группы')
+            # else:
+            #     for i in range(num.__round__() + 1): # добавить условие с целочисленным делением, т.е. когда float == int
+            #         lst_about_grp.extend(about_all_groups(lst_spy_gid[:500]))
+            #         del lst_spy_gid[:500]
+            # --------------------------
+            # не нужно
             # method = 'groups.getById'
             # parametrs = {
             #     'group_ids': ','.join(lst_spy_gid),
@@ -334,12 +350,17 @@ class UserVK:
             # resp = response.json()['response']
             lst_spy = []
             # pprint(lst_about_grp)
-            for lst in lst_about_grp:
-                globals()[f'grp_{lst["id"]}'] = GroupVK(lst["id"])
-                lst_spy.append(globals()[f'grp_{lst["id"]}'].__dict__())
-                print('\b..', end='')
-            print(lst_spy, '=====!!!====')
-            return lst_spy
+            # for lst in lst_about_grp:
+            if len(lst_spy_gid) == 0:
+                print('no this groups')
+                return None
+            else:
+                for lst in lst_spy_gid:
+                    globals()[f'grp_{lst}'] = GroupVK(lst)
+                    lst_spy.append(globals()[f'grp_{lst}'].__dict__())
+                    print('\b..', end='')
+                print(lst_spy, '=====!!!====')
+                return lst_spy
 
     def __and__(self, other):
         """
@@ -440,7 +461,7 @@ class GroupVK:
 
 # чуть позже
 #
-# def input_id_user():
+# def input_id_user(id, membs=0):
 #     n = input('Input id user')
 #     bla-bla-bla
 #
@@ -455,7 +476,7 @@ class GroupVK:
 #         prog = str(input(f'\n{"=" * 80}'
 #                          '\n\n  номер действия: '.upper()))
 #         if prog == '1':
-#             input_id_user()
+#             input_id_user(id, membs)
 #         elif prog == '2':
 #             # function()
 #             pass
