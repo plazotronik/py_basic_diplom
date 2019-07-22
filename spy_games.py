@@ -61,13 +61,14 @@
 
 from reg_auth import gettoken # get token from my file
 import requests
-from time import sleep
+from time import sleep, ctime
 from pprint import pprint
 
 # заюзать нормальную крутилку палки вместо дешманских точек по всему коду??? да. нет? да!
 import threading
 import itertools
 import sys
+import tqdm
 
 
 URL = 'https://api.vk.com/method/'
@@ -77,28 +78,8 @@ VER = '5.101'
 
 TOKEN = gettoken() # заменить на токен с доступом к группам...
 
-# def about_all_groups(lst_ids): # по сути lst_ids это результат getgroups(self)
-#     '''
-#     Get info about 500 groups for create class GroupVK with member_count.
-#     ???По сути уже не нужно, т.к. задействуется функционал в самом классе GroupVK????
-#
-#     :param lst_ids:
-#     :return:
-#     '''
-#     method = 'groups.getById'
-#     # print(type(lst_ids[0]))
-#     # print(lst_ids)
-#     parametrs = {
-#         'group_ids': ','.join(str(i) for i in lst_ids),
-#         'fields': 'members_count',
-#         'v': VER,
-#         'access_token': TOKEN,
-#     }
-#     sleep(0.2)
-#     response = requests.get(url=f'{URL}{method}', params=parametrs)
-#     # pprint(response.json())
-#     resp = response.json()['response']
-#     return resp
+t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', mininterval=0.5, miniters=1)
+
 
 def exec_spy_groups(groups, members=0):
     '''
@@ -236,7 +217,7 @@ class UserVK:
         if self.delete:
             return print(f'Пользователь c id{self.user_id} удален или заблокирован.')
         elif self.close & (not self.can_access_closed):
-            return print('profile private')
+            return print('\nprofile private')
         else:
             method = 'groups.get'
             parametrs = {
@@ -264,6 +245,7 @@ class UserVK:
                 # print('\b..', end='')
                 # return lst_gid
                 # print(resp)
+                t.update(len(resp))
                 return resp
 
     def getspygroups(self, membs=0):
@@ -276,39 +258,8 @@ class UserVK:
         if self.delete:
             return print(f'Пользователь c id{self.user_id} удален или заблокирован.')
         elif self.close & (not self.can_access_closed):
-            return print('profile private')
+            return print('\nprofile private')
         else:
-            # заменено на execute
-            # lst_spy_gid = []
-            # for group in self.getgroups():
-            #     # lst.append(group['id']) # например так
-            #     # или на каждый айди запрашивать наличие френдов,
-            #     # если их там нет то добавляем к новому списку для вывода из этого метода
-            #     method = 'groups.getMembers'
-            #     parametrs = {
-            #         'group_id': group,
-            #         'filter': 'friends',
-            #         'v': VER,
-            #         'access_token': gettoken(),
-            #     }
-            #     try:
-            #         sleep(0.2)
-            #         response = requests.get(url=f'{URL}{method}', params=parametrs)
-            #         # pprint(response.json())
-            #         print('\b..', end='')
-            #         resp = response.json()['response']['count']
-            #     except KeyError:
-            #         resp = response.json()["error"]
-            #         KE = f'\nПроизошла ошибка обращения к ключу. Возможно сервер вернул не то, что ожидалось.' \
-            #             f'\nerror_code = {resp["error_code"]}\nerror_msg = {resp["error_msg"]}'
-            #         # print(KE)
-            #         # return KE
-            #         continue
-            #     else:
-            #         # print(type(resp))
-            #         if resp == 0 or resp < membs:
-            #             lst_spy_gid.append(str(group))
-            #             continue
             lst_spy_gid = []
             # print(self.getgroups(), '+++')
             lst_tmp = self.getgroups()
@@ -317,49 +268,27 @@ class UserVK:
             # print(num1)
             if len(lst_tmp) <= 25:
                 lst_spy_gid = exec_spy_groups(lst_tmp, membs)
+                t.update(len(lst_tmp))
             else:
                 for i in range(num1.__round__() + 1):
                     lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], membs))
+                    t.update(len(lst_tmp))
                     del lst_tmp[:25]
             # print(lst_spy_gid, '000-----000')
             #
-            # уже не надо, юзаем класс групп
-            # lst_about_grp = []
-            # num = len(lst_spy_gid)/500 # преодалеваем ограничение на поиск инфо о 500 группах
-            # if 0 < len(lst_spy_gid) <= 500:
-            #     lst_about_grp = about_all_groups(lst_spy_gid)
-            # elif len(lst_spy_gid) == 0:
-            #     print('не найдены такие группы')
-            # else:
-            #     for i in range(num.__round__() + 1): # добавить условие с целочисленным делением, т.е. когда float == int
-            #         lst_about_grp.extend(about_all_groups(lst_spy_gid[:500]))
-            #         del lst_spy_gid[:500]
-            # --------------------------
-            # не нужно
-            # method = 'groups.getById'
-            # parametrs = {
-            #     'group_ids': ','.join(lst_spy_gid),
-            #     'fields': 'members_count',
-            #     'v': VER,
-            #     'access_token': gettoken(),
-            # }
-            # # print(','.join(lst_spy_gid))
-            # # print(str(lst_spy_gid))
-            # response = requests.get(url=f'{URL}{method}', params=parametrs)
-            # # pprint(response.json())
-            # resp = response.json()['response']
             lst_spy = []
             # pprint(lst_about_grp)
             # for lst in lst_about_grp:
             if len(lst_spy_gid) == 0:
-                print('no this groups')
+                print('\nno this groups')
                 return None
             else:
                 for lst in lst_spy_gid:
+                    t.update(len(lst_spy_gid))
                     globals()[f'grp_{lst}'] = GroupVK(lst)
                     lst_spy.append(globals()[f'grp_{lst}'].__dict__())
                     print('\b..', end='')
-                print(lst_spy, '=====!!!====')
+                print('\n', lst_spy, '=====!!!====')
                 return lst_spy
 
     def __and__(self, other):
@@ -393,7 +322,6 @@ class UserVK:
                     try:
                         sleep(0.2)
                         response = requests.get(url=f'{URL}{method}', params=parametrs)
-                        # print(response.json())
                         resp = response.json()['response']
                     except KeyError:
                         resp = response.json()["error"]
@@ -439,14 +367,12 @@ class GroupVK:
         }
         sleep(0.2)
         response = requests.get(url=f'{URL}{method}', params=parametrs)
-        # pprint(response.json())
-        print('\b..', end='')
         resp = response.json()['response'][0]
         self.name = resp['name']
         self.gid = resp['id']
         self.membs = resp['members_count']
         self.url = f'https://vk.com/club{self.gid}'
-        # print('.'.strip())
+        t.update(1)
 
     def __dict__(self):
         return {
@@ -456,7 +382,6 @@ class GroupVK:
         }
 
     def __str__(self):
-        print('\b..', end='')
         return f'"name": {self.name}, "gid": {self.gid}, "members_count": {self.membs}, "url": {self.url}'
 
 
@@ -465,6 +390,7 @@ class GroupVK:
 # def input_id_user(id, membs=0):
 #     n = input('Input id user')
 #     bla-bla-bla
+#     add progressbar
 #
 # def very_main():
 #     print('\n\nДобро пожаловать в bla-bla-bla!'.upper())
@@ -540,7 +466,7 @@ if __name__ == '__main__':
     sungur.getspygroups()
     print(sep)
     usr_123.getspygroups()
-
+    t.close()
     # pprint(eshmargunov.getgroups())
 
 
