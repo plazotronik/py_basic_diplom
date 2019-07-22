@@ -78,7 +78,9 @@ VER = '5.101'
 
 TOKEN = gettoken() # заменить на токен с доступом к группам...
 
-t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', mininterval=0.5, miniters=1)
+# t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', mininterval=0.5, miniters=1)
+# t.update(1)
+# t.update(len(resp))
 
 
 def exec_spy_groups(groups, members=0):
@@ -144,7 +146,7 @@ class UserVK:
         sleep(0.2)
         response = requests.get(url=f'{URL}{method}', params=parametrs)
         # print(response.json())
-        print('\b..', end='')
+        # print('\b..', end='')
         resp = response.json()['response'][0]
         if 'deactivated' in resp.keys():
             self.delete = True
@@ -195,7 +197,7 @@ class UserVK:
                 sleep(0.2)
                 response = requests.get(url=f'{URL}{method}', params=parametrs)
                 # print(response.json())
-                print('\b..', end='')
+                # print('\b..', end='')
                 resp = response.json()['response']['items']
             except KeyError:
                 resp = response.json()["error"]
@@ -231,7 +233,7 @@ class UserVK:
                 sleep(0.2)
                 response = requests.get(url=f'{URL}{method}', params=parametrs)
                 # pprint(response.json())
-                print('\b..', end='')
+                # print('\b..', end='')
                 resp = response.json()['response']['items']
             except KeyError:
                 resp = response.json()["error"]
@@ -245,7 +247,6 @@ class UserVK:
                 # print('\b..', end='')
                 # return lst_gid
                 # print(resp)
-                t.update(len(resp))
                 return resp
 
     def getspygroups(self, membs=0):
@@ -268,11 +269,9 @@ class UserVK:
             # print(num1)
             if len(lst_tmp) <= 25:
                 lst_spy_gid = exec_spy_groups(lst_tmp, membs)
-                t.update(len(lst_tmp))
             else:
                 for i in range(num1.__round__() + 1):
                     lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], membs))
-                    t.update(len(lst_tmp))
                     del lst_tmp[:25]
             # print(lst_spy_gid, '000-----000')
             #
@@ -284,10 +283,9 @@ class UserVK:
                 return None
             else:
                 for lst in lst_spy_gid:
-                    t.update(len(lst_spy_gid))
                     globals()[f'grp_{lst}'] = GroupVK(lst)
                     lst_spy.append(globals()[f'grp_{lst}'].__dict__())
-                    print('\b..', end='')
+                    # print('\b..', end='')
                 print('\n', lst_spy, '=====!!!====')
                 return lst_spy
 
@@ -372,7 +370,6 @@ class GroupVK:
         self.gid = resp['id']
         self.membs = resp['members_count']
         self.url = f'https://vk.com/club{self.gid}'
-        t.update(1)
 
     def __dict__(self):
         return {
@@ -466,7 +463,7 @@ if __name__ == '__main__':
     sungur.getspygroups()
     print(sep)
     usr_123.getspygroups()
-    t.close()
+    # t.close()
     # pprint(eshmargunov.getgroups())
 
 
