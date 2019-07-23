@@ -78,7 +78,9 @@ VER = '5.101'
 
 TOKEN = gettoken() # заменить на токен с доступом к группам...
 
-# t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', mininterval=0.5, miniters=1)
+# t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', mininterval=0.05, miniters=13)
+# t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
+# t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots')
 # t.update(1)
 # t.update(len(resp))
 
@@ -129,7 +131,7 @@ class UserVK:
     """
     This class is a user on site vk.com
     """
-    def __init__(self, id=171691064):
+    def __init__(self, id='171691064'):
         """
         Создание экземпляра класса. По-дефолту eshmargunov))
 
@@ -137,42 +139,57 @@ class UserVK:
         т.к. дополнительно учитывается время выполнения кода и самого запроса...
         :param id:
         """
+        # t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
         method = 'users.get'
         parametrs = {
             'user_ids': id,
+            'fields': 'domain',
             'v': VER,
             'access_token': TOKEN,
         }
-        sleep(0.2)
-        response = requests.get(url=f'{URL}{method}', params=parametrs)
-        # print(response.json())
-        # print('\b..', end='')
-        resp = response.json()['response'][0]
-        if 'deactivated' in resp.keys():
-            self.delete = True
-            self.close = True
-            self.can_access_closed = False
-        elif resp['is_closed'] & (not resp['can_access_closed']):
-            self.close = True
-            self.can_access_closed = False
-            self.delete = False
-        elif resp['is_closed'] & resp['can_access_closed']:
-            self.close = True
-            self.can_access_closed = True
-            self.delete = False
-        elif resp['can_access_closed'] & (not resp['is_closed']): # вернуться и убрать дубликат!!!!!!!!!
-            self.close = False
-            self.can_access_closed = True
-            self.delete = False
-        else:  # вернуться и убрать дубликат!!!!!!!!!
-            self.can_access_closed = True
-            self.close = False
-            self.delete = False
-        self.user_id = resp['id']
-        self.family = resp['last_name']
-        self.name = resp['first_name']
-        self.fio = self.family + ' ' + self.name
-        self.url = f'https://vk.com/id{self.user_id}'
+        try:
+            sleep(0.2)
+            response = requests.get(url=f'{URL}{method}', params=parametrs)
+            # print(response.json())
+            resp = response.json()['response'][0]
+        except KeyError:
+            resp = response.json()["error"]
+            KE = f'\nПроизошла ошибка обращения к ключу. Возможно сервер вернул не то, что ожидалось.' \
+                f'\nЛибо Вы ошиблись с вводом. Подробная ошибка:' \
+                f'\nerror_code = {resp["error_code"]}\nerror_msg = {resp["error_msg"]}'
+            print(KE)
+            # return KE
+        else:
+            # print('\b..', end='')
+            # resp = response.json()['response'][0]
+            if 'deactivated' in resp.keys():
+                self.delete = True
+                self.close = True
+                self.can_access_closed = False
+            elif resp['is_closed'] & (not resp['can_access_closed']):
+                self.close = True
+                self.can_access_closed = False
+                self.delete = False
+            elif resp['is_closed'] & resp['can_access_closed']:
+                self.close = True
+                self.can_access_closed = True
+                self.delete = False
+            elif resp['can_access_closed'] & (not resp['is_closed']): # вернуться и убрать дубликат!!!!!!!!!
+                self.close = False
+                self.can_access_closed = True
+                self.delete = False
+            else:  # вернуться и убрать дубликат!!!!!!!!!
+                self.can_access_closed = True
+                self.close = False
+                self.delete = False
+            # t.update()
+            self.user_id = resp['id']
+            self.family = resp['last_name']
+            self.name = resp['first_name']
+            self.domain = resp['domain']
+            self.fio = self.family + ' ' + self.name
+            self.url = f'https://vk.com/{self.domain}'
+            # t.close()
 
     def getfriends(self):
         """
@@ -195,6 +212,7 @@ class UserVK:
             }
             try:
                 sleep(0.2)
+                t = tqdm.tqdm(iterable=None, desc='Progress', total=1, unit=' parrots', leave=False)
                 response = requests.get(url=f'{URL}{method}', params=parametrs)
                 # print(response.json())
                 # print('\b..', end='')
@@ -208,7 +226,9 @@ class UserVK:
             else:
                 print(f'\nДрузья пользователя {self.fio} ({self.url}):')
                 for i, rsp in enumerate(resp):
+                    t.update()
                     print(f'{" " * 3}{i+1}) {rsp["last_name"]} {rsp["first_name"]} - https://vk.com/id{rsp["id"]}')
+                # t.close()
                 return resp
 
     def getgroups(self):
@@ -219,7 +239,7 @@ class UserVK:
         if self.delete:
             return print(f'Пользователь c id{self.user_id} удален или заблокирован.')
         elif self.close & (not self.can_access_closed):
-            return print('\nprofile private')
+            return print(f'\n{" " * 3}Невозможно найти сообщества - приватный профиль пользователя.')
         else:
             method = 'groups.get'
             parametrs = {
@@ -257,10 +277,12 @@ class UserVK:
         :return:
         '''
         if self.delete:
-            return print(f'Пользователь c id{self.user_id} удален или заблокирован.')
+            return print(f'\nПользователь c id{self.user_id} удален или заблокирован.')
         elif self.close & (not self.can_access_closed):
-            return print('\nprofile private')
+            return print(f'\n{" " * 3}Невозможно найти сообщества - приватный профиль пользователя.')
         else:
+            t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
+            t.update()
             lst_spy_gid = []
             # print(self.getgroups(), '+++')
             lst_tmp = self.getgroups()
@@ -269,24 +291,30 @@ class UserVK:
             # print(num1)
             if len(lst_tmp) <= 25:
                 lst_spy_gid = exec_spy_groups(lst_tmp, membs)
+                t.update()
             else:
                 for i in range(num1.__round__() + 1):
                     lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], membs))
                     del lst_tmp[:25]
-            # print(lst_spy_gid, '000-----000')
+                    t.update()
+            # print(len(lst_spy_gid), '000-----000')
             #
             lst_spy = []
-            # pprint(lst_about_grp)
             # for lst in lst_about_grp:
             if len(lst_spy_gid) == 0:
                 print('\nno this groups')
-                return None
+                # t.close()
+                # return None
             else:
                 for lst in lst_spy_gid:
+                    # print(type(lst))
                     globals()[f'grp_{lst}'] = GroupVK(lst)
                     lst_spy.append(globals()[f'grp_{lst}'].__dict__())
+                    t.update()
                     # print('\b..', end='')
-                print('\n', lst_spy, '=====!!!====')
+                t.close()
+                sleep(0.3)
+                print(lst_spy)
                 return lst_spy
 
     def __and__(self, other):
@@ -356,6 +384,7 @@ class GroupVK:
         т.к. дополнительно учитывается время выполнения кода и самого запроса...
         :param id:
         """
+        # t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
         method = 'groups.getById'
         parametrs = {
             'group_id': id,
@@ -365,11 +394,20 @@ class GroupVK:
         }
         sleep(0.2)
         response = requests.get(url=f'{URL}{method}', params=parametrs)
+        # print(response.json())
         resp = response.json()['response'][0]
-        self.name = resp['name']
-        self.gid = resp['id']
-        self.membs = resp['members_count']
-        self.url = f'https://vk.com/club{self.gid}'
+        # t.update()
+        if 'deactivated' in resp.keys():
+            self.name = resp['name']
+            self.gid = resp['id']
+            self.membs = None
+            self.url = f'https://vk.com/club{self.gid}'
+        else:
+            self.name = resp['name']
+            self.gid = resp['id']
+            self.membs = resp['members_count']
+            self.url = f'https://vk.com/club{self.gid}'
+            # t.close()
 
     def __dict__(self):
         return {
@@ -384,40 +422,75 @@ class GroupVK:
 
 # чуть позже
 #
-# def input_id_user(id, membs=0):
-#     n = input('Input id user')
-#     bla-bla-bla
-#     add progressbar
-#
-# def very_main():
-#     print('\n\nДобро пожаловать в bla-bla-bla!'.upper())
-#     print('\n\nВам необходимо ввести номер действия, чтобы программа выполнила это действие: '
-#           '\n\n   1. Вывод bla-bla-bla.'
-#           '\n   2. Ввод bla-bla-bla.'
-#           '\n   9. Вывод этой справки.'
-#           '\n   0. Выйти из программы.')
-#     while True:
-#         prog = str(input(f'\n{"=" * 80}'
-#                          '\n\n  номер действия: '.upper()))
-#         if prog == '1':
-#             input_id_user(id, membs)
-#         elif prog == '2':
-#             # function()
-#             pass
-#         elif prog == '9':
-#             print('\n\nВам необходимо ввести номер действия, чтобы программа выполнила это действие: '
-#                   '\n\n   1. Вывод bla-bla-bla.'
-#                   '\n   2. Ввод bla-bla-bla.'
-#                   '\n   9. Вывод этой справки.'
-#                   '\n   0. Выйти из программы.')
-#         elif prog == '0':
-#             print('\n   Надеемся Вам очень понравилась наша программа!',
-#                   '\n   Вопросы и предложения присылайте по адресу: info@it-vi.ru',
-#                   '\n   Досвидания!'.upper())
-#             break
-#         else:
-#             print('\nТакой функционал программы пока не подвезли)))'
-#                   '\nЕсть предложения? Пишите по адресу: info@it-vi.ru')
+def input_id_user(membs=0):
+    user_id = str(input('Введите id искомого пользователя: ')).lower()
+    if ',' in user_id:
+        print('\nВы задали больше одного пользователя. Находим сообщества для каждого.')
+        for user in list(user_id.split(',')):
+            user = str(user.strip())
+            try:
+                tmp = UserVK(user)
+                # print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
+                # tmp.getspygroups(membs)
+                globals()[f'usr_{user}'] = UserVK(user)
+                print(f"\nСообщества пользователя {globals()[f'usr_{user}'].fio} с id {globals()[f'usr_{user}'].user_id}:")
+                globals()[f'usr_{user}'].getspygroups(membs)
+            except Exception as e:
+                print(e)
+            # else:
+            #
+            #     print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
+            #     tmp.getspygroups(membs)
+    elif ' ' in user_id:
+        print('\nВы задали больше одного пользователя. Находим сообщества для каждого.')
+        for user in list(user_id.split(' ')):
+            user = user.strip()
+            try:
+                tmp = UserVK(user)
+                print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
+                tmp.getspygroups(membs)
+                # globals()[f'usr_{user}'] = UserVK(user)
+                # print(f"\nСообщества пользователя {globals()[f'usr_{user}'].fio} с id {globals()[f'usr_{user}'].user_id}:")
+                # globals()[f'usr_{user}'].getspygroups(membs)
+            except Exception:
+                pass
+    else:
+        pass
+    # t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots')
+    # global t
+    # bla-bla-bla
+    # add progressbar
+
+def very_main():
+    print('\n\nДобро пожаловать в "Spy Games"'.upper())
+    print('\n\nВам необходимо ввести цифру ниже, чтобы программа выполнила нужное действие: '
+          '\n\n   1. Вывод сообществ пользователя, где нет ни одного его друга.'
+          '\n   2. Вывод сообществ пользователя, где есть заданное число его друзей.'
+          '\n   9. Вывод этой справки.'
+          '\n   0. Выйти из программы.')
+    while True:
+        prog = str(input(f'\n{"=" * 80}'
+                         '\n\n  номер действия: '.upper()))
+        if prog == '1':
+            input_id_user()
+        elif prog == '2':
+            # function()
+            pass
+        elif prog == '9':
+            print('\n\nВам необходимо ввести номер действия, чтобы программа выполнила это действие: '
+                  '\n\n   1. Вывод bla-bla-bla.'
+                  '\n   2. Ввод bla-bla-bla.'
+                  '\n   9. Вывод этой справки.'
+                  '\n   0. Выйти из программы.')
+        elif prog == '0':
+            print('\n   Надеемся Вам очень понравилась наша программа!',
+                  '\n   Вопросы и предложения присылайте по адресу: info@it-vi.ru',
+                  '\n   Досвидания!'.upper())
+            # t.close()
+            break
+        else:
+            print('\nТакой функционал программы пока не подвезли)))'
+                  '\nЕсть предложения? Пишите по адресу: info@it-vi.ru')
 
 
 if __name__ == '__main__':
@@ -429,48 +502,53 @@ if __name__ == '__main__':
     sep = f'\n\n{"=" * 20}\n'
     #
     # # == ЭКЗЕМПЛЯРЫ КЛАССА ==
-    eshmargunov = UserVK()
-    usr_3563036 = UserVK(3563036)
-    usr_110553958 = UserVK(110553958)
-
-    eshmargunov.getgroups()
-    print(sep)
-    usr_3563036.getgroups()
-    usr_3563036.getfriends()
-    usr_3563036.getspygroups()
-    print(sep)
-    usr_110553958.getgroups()
-    usr_110553958.getspygroups()
-    usr_110553958.getspygroups(3)
-    print(sep)
-    usr_110553958 & 0000000
-    usr_110553958 & usr_3563036
-    print(sep)
-    grp_93481730 = GroupVK(93481730)
-    print(grp_93481730.__dict__())
-    print(grp_93481730)
-    print(sep)
-
-    print(sep, '\n', '+++')
-    eshmargunov.getspygroups()
-    eshmargunov.getspygroups(3)
-    print(sep, '\n', '+++')
-    usr_110553958.getspygroups()
-    usr_110553958.getspygroups(3)
-
-    sungur = UserVK(9380940)
-    sergey = UserVK(2020911)
-    usr_123 = UserVK(10554929)
-    sergey.getspygroups()
-    sergey.getspygroups(3)
-    print(sep)
-    sungur.getspygroups()
-    sungur.getspygroups(3)
-    print(sep)
-    usr_123.getspygroups()
-    usr_123.getspygroups(4)
+    # eshmargunov_1 = UserVK()
+    # usr_3563036 = UserVK(3563036)
+    # usr_110553958 = UserVK(110553958)
+    #
+    # eshmargunov_1.getgroups()
+    # print(sep)
+    # usr_3563036.getgroups()
+    # usr_3563036.getfriends()
+    # usr_3563036.getspygroups()
+    # print(sep)
+    # usr_110553958.getgroups()
+    # usr_110553958.getspygroups()
+    # usr_110553958.getspygroups(3)
+    # print(sep)
+    # usr_110553958 & 0000000
+    # usr_110553958 & usr_3563036
+    # print(sep)
+    # grp_93481730 = GroupVK(93481730)
+    # print(grp_93481730.__dict__())
+    # print(grp_93481730)
+    # print(sep)
+    #
+    # print(sep, '\n', '+++')
+    # eshmargunov_1.getspygroups()
+    # eshmargunov_1.getspygroups(3)
+    # print(sep, '\n', '+++')
+    # usr_110553958.getspygroups()
+    # usr_110553958.getspygroups(3)
+    #
+    # sungur = UserVK(9380940)
+    # sergey = UserVK(2020911)
+    # usr_123 = \
+    # UserVK('10554929').getspygroups()
+    # print(UserVK('10554929').fio)
+    # print(usr_123.fio)
+    # sergey.getspygroups()
+    # sergey.getspygroups(3)
+    # print(sep)
+    # sungur.getspygroups()
+    # sungur.getspygroups(3)
+    # print(sep)
+    # usr_123.getspygroups()
+    # usr_123.getspygroups(4)
     # t.close()
     # pprint(eshmargunov.getgroups())
 
-
-
+    # eshmargunov = UserVK('eshmargunov, plazotronik')
+    # eshmargunov.getspygroups(7)
+    # input_id_user(10)
+    UserVK('3165485').getspygroups(15)
