@@ -281,8 +281,9 @@ class UserVK:
         elif self.close & (not self.can_access_closed):
             return print(f'\n{" " * 3}Невозможно найти сообщества - приватный профиль пользователя.')
         else:
-            t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
-            t.update()
+            sleep(0.1)
+            t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False, mininterval=0.05)
+            t.update(13)
             lst_spy_gid = []
             # print(self.getgroups(), '+++')
             lst_tmp = self.getgroups()
@@ -291,12 +292,12 @@ class UserVK:
             # print(num1)
             if len(lst_tmp) <= 25:
                 lst_spy_gid = exec_spy_groups(lst_tmp, membs)
-                t.update()
+                t.update(1)
             else:
                 for i in range(num1.__round__() + 1):
                     lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], membs))
                     del lst_tmp[:25]
-                    t.update()
+                    t.update(2)
             # print(len(lst_spy_gid), '000-----000')
             #
             lst_spy = []
@@ -310,10 +311,11 @@ class UserVK:
                     # print(type(lst))
                     globals()[f'grp_{lst}'] = GroupVK(lst)
                     lst_spy.append(globals()[f'grp_{lst}'].__dict__())
-                    t.update()
+                    t.update(3)
                     # print('\b..', end='')
                 t.close()
                 sleep(0.3)
+                print('Колличество сообществ: ', len(lst_spy), 'шт.')
                 print(lst_spy)
                 return lst_spy
 
@@ -398,16 +400,13 @@ class GroupVK:
         resp = response.json()['response'][0]
         # t.update()
         if 'deactivated' in resp.keys():
-            self.name = resp['name']
-            self.gid = resp['id']
             self.membs = None
-            self.url = f'https://vk.com/club{self.gid}'
         else:
-            self.name = resp['name']
-            self.gid = resp['id']
             self.membs = resp['members_count']
-            self.url = f'https://vk.com/club{self.gid}'
-            # t.close()
+        self.name = resp['name']
+        self.gid = resp['id']
+        self.url = f'https://vk.com/club{self.gid}'
+        # t.close()
 
     def __dict__(self):
         return {
@@ -423,26 +422,27 @@ class GroupVK:
 # чуть позже
 #
 def input_id_user(membs=0):
-    user_id = str(input('Введите id искомого пользователя: ')).lower()
+    user_id = str(input('Введите id пользовател(я/ей): ')).lower()
     if ',' in user_id:
-        print('\nВы задали больше одного пользователя. Находим сообщества для каждого.')
+        print('\nНаходим сообщества для каждого пользователя.')
         for user in list(user_id.split(',')):
             user = str(user.strip())
             try:
                 tmp = UserVK(user)
-                # print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
-                # tmp.getspygroups(membs)
-                globals()[f'usr_{user}'] = UserVK(user)
-                print(f"\nСообщества пользователя {globals()[f'usr_{user}'].fio} с id {globals()[f'usr_{user}'].user_id}:")
-                globals()[f'usr_{user}'].getspygroups(membs)
-            except Exception as e:
-                print(e)
+                print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
+                tmp.getspygroups(membs)
+                # globals()[f'usr_{user}'] = UserVK(user)
+                # print(f"\nСообщества пользователя {globals()[f'usr_{user}'].fio} с id {globals()[f'usr_{user}'].user_id}:")
+                # globals()[f'usr_{user}'].getspygroups(membs)
+            except Exception as err:
+                # print(err)
+                pass
             # else:
             #
             #     print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
             #     tmp.getspygroups(membs)
     elif ' ' in user_id:
-        print('\nВы задали больше одного пользователя. Находим сообщества для каждого.')
+        print('\nНаходим сообщества для каждого пользователя.')
         for user in list(user_id.split(' ')):
             user = user.strip()
             try:
@@ -455,7 +455,13 @@ def input_id_user(membs=0):
             except Exception:
                 pass
     else:
-        pass
+        try:
+            tmp = UserVK(user_id)
+            print(f"\nСообщества пользователя {tmp.fio} с id {tmp.user_id}:")
+            tmp.getspygroups(membs)
+        except Exception:
+            pass
+        # pass
     # t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots')
     # global t
     # bla-bla-bla
@@ -463,9 +469,9 @@ def input_id_user(membs=0):
 
 def very_main():
     print('\n\nДобро пожаловать в "Spy Games"'.upper())
-    print('\n\nВам необходимо ввести цифру ниже, чтобы программа выполнила нужное действие: '
+    print('\n\nВам необходимо ввести цифру ниже, чтобы программа выполнила действие: '
           '\n\n   1. Вывод сообществ пользователя, где нет ни одного его друга.'
-          '\n   2. Вывод сообществ пользователя, где есть заданное число его друзей.'
+          '\n   2. Вывод сообществ пользователя, где есть его друзья не более, чем заданное число.'
           '\n   9. Вывод этой справки.'
           '\n   0. Выйти из программы.')
     while True:
@@ -474,12 +480,16 @@ def very_main():
         if prog == '1':
             input_id_user()
         elif prog == '2':
+            try:
+                input_id_user(int(input('Введите количество друзей пользователя в сообществах: ')))
+            except ValueError:
+                print('\nВведено некорректное количество друзей. Это должно быть целое число. Попробуйте еще раз.')
             # function()
             pass
         elif prog == '9':
-            print('\n\nВам необходимо ввести номер действия, чтобы программа выполнила это действие: '
-                  '\n\n   1. Вывод bla-bla-bla.'
-                  '\n   2. Ввод bla-bla-bla.'
+            print('\n\nВам необходимо ввести цифру ниже, чтобы программа выполнила действие: '
+                  '\n\n   1. Вывод сообществ пользователя, где нет ни одного его друга.'
+                  '\n   2. Вывод сообществ пользователя, где есть его друзья не более, чем заданное число.'
                   '\n   9. Вывод этой справки.'
                   '\n   0. Выйти из программы.')
         elif prog == '0':
@@ -494,7 +504,7 @@ def very_main():
 
 
 if __name__ == '__main__':
-    # very_main()
+    very_main()
 
 
     # pass
@@ -551,4 +561,4 @@ if __name__ == '__main__':
     # eshmargunov = UserVK('eshmargunov, plazotronik')
     # eshmargunov.getspygroups(7)
     # input_id_user(10)
-    UserVK('3165485').getspygroups(15)
+    # UserVK('3165485').getspygroups()
