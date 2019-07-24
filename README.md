@@ -31,3 +31,5 @@ https://github.com/netology-code/py-diplom.git
 
 ### requirements.txt
 Перечень библиотек необходимых для работы всей программы
+
+###### В программе используется «Яндекс.Переводчик» http://translate.yandex.ru/
