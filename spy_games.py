@@ -7,11 +7,11 @@ import requests
 import tqdm
 import json
 import os
-
+import reg_auth
 
 URL = 'https://api.vk.com/method/'
 VER = '5.101'
-TOKEN = 'be427a11b7c20f57643d8c52d87e5f357ad196f90e59d5752449fa46f015104781de59787f9706b18aac2'
+TOKEN = reg_auth.gettoken() #'be427a11b7c20f57643d8c52d87e5f357ad196f90e59d5752449fa46f015104781de59787f9706b18aac2'
 
 
 def make_output_dir():
@@ -44,7 +44,7 @@ def write_json(text, id, members=0, mode='wt'):
         file.write(txt)
 
 
-def exec_spy_groups(groups, members=0):
+def exec_spy_groups(groups, members=1):
     '''
     get spy groups with execute
 
@@ -64,8 +64,8 @@ def exec_spy_groups(groups, members=0):
     var gidsafter = [];
     while (i < gidsbefore.length) {
     var ids = gidsbefore.pop();
-    var resp = API.groups.getMembers({"group_id": ids , "filter": "friends"});
-    if ((resp.count == 0) || (resp.count < members)) {
+    var resp = API.groups.getMembers({"group_id": ids, "filter": "friends"});
+    if (resp.count < members) {
     gidsafter.push(ids);
     }
     i = i + 1;
@@ -79,9 +79,82 @@ def exec_spy_groups(groups, members=0):
     }
     sleep(0.2)
     response = requests.get(url=f'{URL}{method}', params=parametrs)
+    print(response.json())
     resp = response.json()['response']
     return resp
 
+def exec_spy_groups_2(users):
+    '''
+    get spy groups with execute
+
+    :param users:
+    list ids all users
+    :return:
+    list ids spy groups
+    '''
+    method = 'execute'
+    # print(len(users))
+    users_str = ",".join(str(i) for i in users)
+    print(users_str)
+    code = '''
+    var i = 0;
+    var uidsbefore = [''' + users_str + '''];
+    var gidsafter = [];
+    while (i < 25) {
+    var id = uidsbefore.pop();
+    var resp = API.groups.get({"user_id": id});
+    gidsafter.push(resp.items);
+    i = i + 1;
+    }
+    return gidsafter;
+    '''
+    parametrs = {
+        'code': code.strip(),
+        'v': VER,
+        'access_token': TOKEN,
+    }
+    sleep(0.3)
+    response = requests.get(url=f'{URL}{method}', params=parametrs)
+    print(response.json())
+    resp = response.json()['response']
+    return resp
+
+def exec_spy_groups_3(group, offset=0):
+    '''
+    get spy groups with execute
+
+    :param groups:
+    list ids all groups
+    :param members:
+    count member friends of group
+    :return:
+    list ids spy groups
+    '''
+    method = 'execute'
+    # groups_str = ",".join(str(i) for i in groups)
+    code = '''
+    var i = 0;
+    var gid = [''' + str(group) + '''];
+    var uids = [];
+    var offset = ''' + str(offset) + ''';
+    while (i < 25) {
+    var resp = API.groups.getMembers({"group_id": gid, "offset": offset});
+    uids.push(resp.items);
+    offset = offset + 1000;
+    i = i + 1;
+    }
+    return uids;
+    '''
+    parametrs = {
+        'code': code.strip(),
+        'v': VER,
+        'access_token': TOKEN,
+    }
+    sleep(0.2)
+    response = requests.get(url=f'{URL}{method}', params=parametrs)
+    # print(response.json())
+    resp = response.json()['response']
+    return resp
 
 class UserVK:
     """
@@ -161,7 +234,7 @@ class UserVK:
             }
             try:
                 sleep(0.2)
-                t = tqdm.tqdm(iterable=None, desc='Progress', total=1, unit=' parrots', leave=False)
+                # t = tqdm.tqdm(iterable=None, desc='Progress', total=1, unit=' parrots', leave=False)
                 response = requests.get(url=f'{URL}{method}', params=parametrs)
                 resp = response.json()['response']['items']
             except KeyError:
@@ -171,10 +244,10 @@ class UserVK:
                 print(KE)
                 return KE
             else:
-                print(f'\nДрузья пользователя {self.fio} ({self.url}):')
-                for i, rsp in enumerate(resp):
-                    t.update()
-                    print(f'{" " * 3}{i+1}) {rsp["last_name"]} {rsp["first_name"]} - https://vk.com/id{rsp["id"]}')
+                # print(f'\nДрузья пользователя {self.fio} ({self.url}):')
+                # for i, rsp in enumerate(resp):
+                #     t.update()
+                #     print(f'{" " * 3}{i+1}) {rsp["last_name"]} {rsp["first_name"]} - https://vk.com/id{rsp["id"]}')
                 return resp
 
     def getgroups(self):
@@ -225,32 +298,195 @@ class UserVK:
             return print(f'{" " * 3}Невозможно найти сообщества - приватный профиль пользователя.')
         else:
             sleep(0.1)
-            t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
-            t.update(13)
+            # t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
+            # t.update(13)
             lst_spy_gid = []
             lst_tmp = self.getgroups()
             num1 = len(lst_tmp) / 25
             if len(lst_tmp) <= 25:
                 lst_spy_gid = exec_spy_groups(lst_tmp, members)
-                t.update(1)
+                # t.update(1)
             else:
                 for i in range(num1.__round__() + 1):
                     lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], members))
                     del lst_tmp[:25]
-                    t.update(2)
+                    # t.update(2)
             lst_spy = []
             if len(lst_spy_gid) == 0:
-                print('\nТаковых групп пользователь не имеет.')
+                print(f'\n{" "*3}Таковых групп пользователь не имеет.')
             else:
                 for lst in lst_spy_gid:
                     globals()[f'grp_{lst}'] = GroupVK(lst)
                     lst_spy.append(globals()[f'grp_{lst}'].__dict__())
-                    t.update(3)
-                t.close()
+                    # t.update(3)
+                # t.close()
                 sleep(0.3)
                 print('Колличество сообществ: ', len(lst_spy), 'шт.')
                 pprint(lst_spy)
                 return lst_spy
+
+    def getspygroups_2(self, members=0):
+        '''
+        method for get spy groups
+
+        :param members:
+        count member friends of group
+        :return:
+        list ids of spy groups
+        '''
+        if self.delete:
+            return print(f'{" " * 3}Невозможно найти сообщества - пользователь c id{self.user_id} '
+                         f'удален или заблокирован.')
+        elif self.close & (not self.can_access_closed):
+            return print(f'{" " * 3}Невозможно найти сообщества - приватный профиль пользователя.')
+        else:
+            # sleep(0.1)
+            t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
+            t.update(13)
+            # lst_spy_gid = []
+            set_tmp = set(self.getgroups())
+            print(set_tmp)
+            list_friends = [i["id"].__str__() for i in self.getfriends()]
+            # print(list_friends)
+            # for uid in list_friends:
+            #     print(f'{uid}')
+            #     try:
+            #         set_tmp.difference_update(set(UserVK(uid).getgroups()))
+            #     except Exception as err:
+            #         pass
+            #     else:
+            #         continue
+                # t.update(3)
+            # print(set_tmp)
+            # for grp in set_tmp:
+            #     print(GroupVK(grp).name)
+                # pass
+            num1 = len(list_friends) / 25
+            # if len(list_friends) <= 25:
+            #     set_tmp.difference_update(set(exec_spy_groups_2(list_friends)))
+            #     # lst_spy_gid = exec_spy_groups(list_friends, members)
+            #     t.update(1)
+            # else:
+            # set_groups = set()
+            for i in range(num1.__round__() + 1):
+                # set_tmp.difference_update(set(exec_spy_groups_2(list_friends[:25])))
+                num = 0
+                lst_tmp = exec_spy_groups_2(list_friends[:25])
+                t.update(3)
+                try:
+                    while num < len(lst_tmp):
+                        ids = lst_tmp.pop()
+                        # print(ids)
+                        # if ids != None:
+                            # set_groups.update(set(ids))
+                            # print(ids)
+                        set_tmp -= set(ids)
+                            # t.update(3)
+                        num += 1
+                except Exception:
+                    pass
+                # lst_spy_gid.extend(exec_spy_groups(lst_tmp[:25], members))
+                del list_friends[:25]
+                t.update(2)
+            # set_tmp.difference_update(set_groups)
+            t.close()
+            sleep(0.1)
+            print(len(set_tmp))
+            print(set_tmp)
+
+            # for grp in set_tmp:
+            #     print(GroupVK(grp).url)
+            # lst_spy = []
+            # if len(lst_spy_gid) == 0:
+            #     print(f'\n{" "*3}Таковых групп пользователь не имеет.')
+            # else:
+            #     for lst in lst_spy_gid:
+            #         globals()[f'grp_{lst}'] = GroupVK(lst)
+            #         lst_spy.append(globals()[f'grp_{lst}'].__dict__())
+            #         t.update(3)
+            #     t.close()
+            #     sleep(0.3)
+            #     print('Колличество сообществ: ', len(lst_spy), 'шт.')
+            #     pprint(lst_spy)
+            #     return lst_spy
+
+    def getspygroups_3(self, members=0):
+        '''
+        method for get spy groups
+
+        :param members:
+        count member friends of group
+        :return:
+        list ids of spy groups
+        '''
+        if self.delete:
+            return print(f'{" " * 3}Невозможно найти сообщества - пользователь c id{self.user_id} '
+                         f'удален или заблокирован.')
+        elif self.close & (not self.can_access_closed):
+            return print(f'{" " * 3}Невозможно найти сообщества - приватный профиль пользователя.')
+        else:
+            # sleep(0.1)
+            t = tqdm.tqdm(desc='Progress', total=1, unit=' parrots', leave=False)
+            t.update(13)
+            # lst_spy_gid = []
+            list_guids = self.getgroups()
+            # print(list_guids)
+            list_spy_guids = []
+            list_friends = [i["id"] for i in self.getfriends()]
+            # print(list_friends)
+            for guid in list_guids:
+                list_members = []
+                membs_c = GroupVK(guid).membs
+                try:
+                    num = membs_c / 25000
+                except Exception:
+                    continue
+                    pass
+                else:
+                    t.update(3)
+                    if num < 1:
+                        num1 = 0
+                        lst_tmp = exec_spy_groups_3(guid)
+                        try:
+                            while num1 < len(lst_tmp):
+                                list_members.extend(lst_tmp.pop())
+                                num1 += 1
+                                t.update(3)
+                        except Exception:
+                            pass
+                    else:
+                        off = 0
+                        num1 = 0
+                        for i in range(num.__round__() + 1):
+                            lst_tmp = exec_spy_groups_3(guid, off)
+                            try:
+                                while num1 < len(lst_tmp):
+                                    list_members.extend(lst_tmp.pop())
+                                    num1 += 1
+                                    t.update(3)
+                            except Exception:
+                                pass
+                            off += 25000
+                        t.update(2)
+                    # print(list_members)
+                    set_tmp = set(list_friends)&set(list_members)
+                    if len(set_tmp) != 0:
+                        t.update(3)
+                        print(set_tmp)
+                        # continue
+                    else:
+                        list_spy_guids.append(guid)
+                        print(list_spy_guids)
+                        t.update(3)
+
+            # except Exception:
+            #     pass
+            t.close()
+            print(len(list_spy_guids))
+            print(list_spy_guids)
+            for grp in list_spy_guids:
+                print(GroupVK(grp))
+
 
     def __and__(self, other):
         '''
@@ -440,5 +676,8 @@ def very_main():
 
 
 if __name__ == '__main__':
-    make_output_dir()
-    very_main()
+    # make_output_dir()
+    # very_main()
+    tmp = UserVK('eshmargunov')#.getfriends()
+    # print('=============', tmp)
+    tmp.getspygroups_2()
